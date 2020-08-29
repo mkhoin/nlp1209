@@ -39,7 +39,7 @@ https://www.tensorflow.org/guide/migrate?hl=ko
 
 ### Google Colab(코랩) 사용법 (GPU 무료 사용 가능)
 #### https://theorydb.github.io/dev/2019/08/23/dev-ml-colab/  <br>
-
+<br>
 
 
 ### 1일 수업 시간표 <br>
