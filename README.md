@@ -3,8 +3,8 @@
 <br>
 
 ### 참고 사이트
-캐글 경진대회 소스 깃허브 <br>
-   https://github.com/corazzon/KaggleStruggle
+데이터 과학 경진대회 사이트 모음 <br>
+   https://theorydb.github.io/dev/2019/06/23/dev-competition-list/
 <br>
 
 모두를 위한 머신러닝과 딥러닝의 강의(김성훈교수님) <br>
