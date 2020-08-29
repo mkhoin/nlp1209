@@ -84,9 +84,7 @@ https://www.tensorflow.org/guide/migrate?hl=ko
  05:00 ~ 05:50 <br>
  
 ###
-###
 <br>
-
 ### 강의 일정 <br>
 
 총 140시간 (17.5일)
