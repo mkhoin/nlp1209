@@ -2,6 +2,44 @@
 <br>
 <br>
 
+### 참고 사이트
+캐글 경진대회 소스 깃허브 <br>
+   https://github.com/corazzon/KaggleStruggle
+<br>
+
+모두를 위한 머신러닝과 딥러닝의 강의(김성훈교수님) <br>
+   https://hunkim.github.io/ml/
+<br>
+
+Andrew Ng’s and other ML tutorials <br>
+  https://class.coursera.org/ml-003/lecture <br>
+  http://www.holehouse.org/mlclass/  <br> <br>
+Deep Learning Tutorial <br>
+  http://deeplearning.stanford.edu/tutorial/
+<br>
+Convolutional Neural Networks for Visual Recognition <br>
+  http://cs231n.stanford.edu/syllabus.html <br>
+Deep Learning for Natural Language Processing <br>
+  http://cs224d.stanford.edu/syllabus.html
+<br>
+
+Tensorflow <br>
+  https://www.tensorflow.org <br>
+TensorFlow Tutorials (Simple Examples) <br>
+  https://github.com/nlintz/TensorFlow-Tutorials <br>
+Another TensorFlow Tutorials <br>
+  https://github.com/pkmital/tensorflow_tutorials <br>
+TensorFlow Examples <br>
+  https://github.com/aymericdamien/TensorFlow-Examples <br>
+<br>
+
+### 기존 코드를 TensorFlow 2.0으로 바꾸기
+https://www.tensorflow.org/guide/migrate?hl=ko
+<br>
+
+### Google Colab(코랩) 사용법 (GPU 무료 사용 가능)
+#### https://theorydb.github.io/dev/2019/08/23/dev-ml-colab/  <br>
+
 
 
 ### 1일 수업 시간표 <br>
@@ -28,8 +66,6 @@
 #### (git 사용기간 : 2020.09.01  ~ 2020.09.24 , 이후에는 접속 불가)
 
 <br>
-
-
 
 ### - GitHub의 쥬피터 노트북 파일 다운로드 방법
 https://datascience.stackexchange.com/questions/35555/how-to-download-a-jupyter-notebook-from-github
