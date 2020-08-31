@@ -41,6 +41,11 @@ https://www.tensorflow.org/guide/migrate?hl=ko
 #### https://theorydb.github.io/dev/2019/08/23/dev-ml-colab/  <br>
 <br>
 
+
+### 점프투 파이썬 온라인 공개 URL
+https://wikidocs.net/4307
+<br>
+   
 ### [기본과정 참고서적]
 1. 파이썬 프로그래밍 관련 추천 서적
 
