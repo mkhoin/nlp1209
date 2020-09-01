@@ -3,6 +3,18 @@
 <br>
 
 ### 참고 사이트
+Kaggle <br>
+   https://www.kaggle.com/
+<br>
+
+UCI Machine Learning Repository (머신러닝 데이터)  <br> 
+   https://archive.ics.uci.edu/ml/index.php
+<br>    
+    
+데이콘 (경진대회)   <br>
+   https://dacon.io/
+<br>
+
 데이터 과학 경진대회 사이트 모음 <br>
    https://theorydb.github.io/dev/2019/06/23/dev-competition-list/
 <br>
