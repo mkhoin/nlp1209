@@ -18,7 +18,7 @@ text = "The black cat ran so fast that the white mouse could not run away."
 
 
 
-[ 과제 2] : WordNet 사용 단엉의 유사도 측정
+[ 과제 2] : WordNet 사용 단어의 유사도 측정
 WordNet을 사용한 경로 거리 기반 유사도 (Path Distance Similarity)값과 비교하여 보세요
 'black'과 'white'의 유사도와 'cat'과 'mouse'의 유사도만 다음 3개의 방법으로 비교해 본다
   - 경로 거리 기반 유사도 (Path Distance Similarity)
