@@ -50,7 +50,7 @@ word_to_id = {}   # dict, {'you':0, 'say':1,....}
 id_to_word = {}   # dict, {0:'you',1:'say',.....}
 
 for word in words: # 8회
-    print(word)
+    #print(word)
     if word not in word_to_id: # 중복 방지
         new_id = len(word_to_id) # 0,1,~ 7
         word_to_id[word] = new_id # word_to_id['you'] = 0
@@ -241,8 +241,8 @@ def create_co_matrix(corpus, vocab_size, window_size=1):
 
 text = 'You say goodbye and I say hello.' 
 corpus, word_to_id,id_to_word = preprocess(text)
-print(corpus)     # 8 개
-print(word_to_id) # 7 개
+# print(corpus)     # 8 개
+# print(word_to_id) # 7 개
 vocab_size = len(word_to_id)   
 C = create_co_matrix(corpus,vocab_size)
 C
@@ -253,8 +253,8 @@ C
 
 text = 'I like apple and you like banana.'
 corpus, word_to_id,id_to_word = preprocess(text)
-print(corpus)     # 8 개
-print(word_to_id) # 7 개
+# print(corpus)     # 8 개
+# print(word_to_id) # 7 개
 vocab_size = len(word_to_id)   
 C = create_co_matrix(corpus,vocab_size)
 C

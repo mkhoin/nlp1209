@@ -8,21 +8,21 @@
 
 import numpy as np
 
-D, N = 8, 7
-x = np.random.rand(1, D)
-print(x,x.shape)   # (1,8)
-print('-'*70)
-y = np.repeat(x, N, axis=0)  # 수직(행) 방향으로 N(7)번 반복 생성
-print(y,y.shape)   # (7,8)
+# D, N = 8, 7
+# x = np.random.rand(1, D)
+# print(x,x.shape)   # (1,8)
+# print('-'*70)
+# y = np.repeat(x, N, axis=0)  # 수직(행) 방향으로 N(7)번 반복 생성
+# print(y,y.shape)   # (7,8)
 
 
 # In[2]:
 
 
-dy = np.random.rand(N, D)
-print(dy,dy.shape)  # (7,8)
-dx = np.sum(dy, axis=0, keepdims=True)  # 수직방향 합, keepdims=True이면 2차원, False면 1차원
-print('-'*70,'\n',dx,dx.shape)
+# dy = np.random.rand(N, D)
+# print(dy,dy.shape)  # (7,8)
+# dx = np.sum(dy, axis=0, keepdims=True)  # 수직방향 합, keepdims=True이면 2차원, False면 1차원
+# print('-'*70,'\n',dx,dx.shape)
 
 
 # ## Sum 노드
@@ -30,22 +30,22 @@ print('-'*70,'\n',dx,dx.shape)
 # In[3]:
 
 
-import numpy as np
+# import numpy as np
 
-D, N = 8, 7
-x = np.random.rand(N, D)
-print(x)
-print('\n')
-y = np.sum(x, axis=0, keepdims=True)
-print(y)
-# dy = np.random.rand(1, D)
+# D, N = 8, 7
+# x = np.random.rand(N, D)
+# print(x)
+# print('\n')
+# y = np.sum(x, axis=0, keepdims=True)
+# print(y)
+# # dy = np.random.rand(1, D)
 
 
 # In[4]:
 
 
-dx = np.repeat(y, N, axis=0)
-dx
+# dx = np.repeat(y, N, axis=0)
+# dx
 
 
 # ## MatMul 노드
@@ -79,7 +79,7 @@ class MatMul:
 a = np.array([1, 2, 3])
 b = np.array([4, 5, 6])
 a = b
-print(a)
+# print(a)
 id(a) == id(b)
 
 
@@ -89,7 +89,7 @@ id(a) == id(b)
 a = np.array([1, 2, 3])
 b = np.array([4, 5, 6])
 a[...] = b
-print(a)
+# print(a)
 id(a) == id(b)
 
 
@@ -168,7 +168,7 @@ class Affine:
 
 
 a = np.zeros_like([[1,2,3]]) # 인자와 shape이 같은 배열을 모든 요소를 0으로 생성
-print(a,type(a))
+# print(a,type(a))
 
 
 # ## Softmax with Loss 계층
@@ -265,9 +265,9 @@ class SoftmaxWithLoss:
 # In[13]:
 
 
-a = np.exp(1)  # e^1, e = 2.718281828459045
-print(a)
-print(2.718281828459045**1)
+# a = np.exp(1)  # e^1, e = 2.718281828459045
+# print(a)
+# print(2.718281828459045**1)
 
 
 # ## 가중치 갱신
