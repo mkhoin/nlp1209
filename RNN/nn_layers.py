@@ -186,16 +186,16 @@ a = np.zeros_like([[1,2,3]]) # 인자와 shape이 같은 배열을 모든 요소
 #     return np.maximum(0, x)
 
 
-# def softmax(x):
-#     if x.ndim == 2:
-#         x = x - x.max(axis=1, keepdims=True)
-#         x = np.exp(x)
-#         x /= x.sum(axis=1, keepdims=True)
-#     elif x.ndim == 1:
-#         x = x - np.max(x)
-#         x = np.exp(x) / np.sum(np.exp(x))
+def softmax(x):
+    if x.ndim == 2:
+        x = x - x.max(axis=1, keepdims=True)
+        x = np.exp(x)
+        x /= x.sum(axis=1, keepdims=True)
+    elif x.ndim == 1:
+        x = x - np.max(x)
+        x = np.exp(x) / np.sum(np.exp(x))
 
-#     return x
+    return x
 
 
 # def cross_entropy_error(y, t):
@@ -821,3 +821,288 @@ def clip_grads(grads, max_norm):
     if rate < 1: # total_norm 이 한계값(max_norm) 보다 클경우
         for grad in grads:
             grad *= rate
+
+
+class LSTM:
+    def __init__(self, Wx, Wh, b):
+        '''
+
+        Parameters
+        ----------
+        Wx: 입력 x에 대한 가중치 매개변수(4개분의 가중치가 담겨 있음)
+        Wh: 은닉 상태 h에 대한 가중치 매개변수(4개분의 가중치가 담겨 있음)
+        b: 편향（4개분의 편향이 담겨 있음）
+        '''
+        self.params = [Wx, Wh, b]
+        self.grads = [np.zeros_like(Wx), np.zeros_like(Wh), np.zeros_like(b)]
+        self.cache = None
+
+    def forward(self, x, h_prev, c_prev):
+        Wx, Wh, b = self.params
+        N, H = h_prev.shape   # N : bath_size,  H : hidden_size
+
+        A = np.dot(x, Wx) + np.dot(h_prev, Wh) + b
+
+        # 동일한  사이즈 4개로 슬라이싱
+        f = A[:, :H]
+        g = A[:, H:2*H]
+        i = A[:, 2*H:3*H]
+        o = A[:, 3*H:]
+
+        f = sigmoid(f)
+        g = np.tanh(g)
+        i = sigmoid(i)
+        o = sigmoid(o)
+
+        c_next = f * c_prev + g * i
+        h_next = o * np.tanh(c_next)
+
+        self.cache = (x, h_prev, c_prev, i, f, g, o, c_next)
+        return h_next, c_next
+
+    def backward(self, dh_next, dc_next):
+        Wx, Wh, b = self.params
+        x, h_prev, c_prev, i, f, g, o, c_next = self.cache
+
+        tanh_c_next = np.tanh(c_next)
+
+        ds = dc_next + (dh_next * o) * (1 - tanh_c_next ** 2)
+
+        dc_prev = ds * f
+
+        di = ds * g
+        df = ds * c_prev
+        do = dh_next * tanh_c_next
+        dg = ds * i
+
+        # sigmoid 미분 : y*(1-y) 
+        di *= i * (1 - i)
+        df *= f * (1 - f)
+        do *= o * (1 - o)
+        dg *= (1 - g ** 2)   # tanh 미분 : (1-y**2)
+
+        dA = np.hstack((df, dg, di, do)) # 수평으로 합치기 (slice의 역전파)
+
+        dWh = np.dot(h_prev.T, dA)  # Matmul 역전파
+        dWx = np.dot(x.T, dA)
+        db = dA.sum(axis=0)
+
+        self.grads[0][...] = dWx
+        self.grads[1][...] = dWh
+        self.grads[2][...] = db
+
+        dx = np.dot(dA, Wx.T)       # Matmul 역전파
+        dh_prev = np.dot(dA, Wh.T)
+
+        return dx, dh_prev, dc_prev
+
+class TimeLSTM:
+    def __init__(self, Wx, Wh, b, stateful=False):
+        self.params = [Wx, Wh, b]
+        self.grads = [np.zeros_like(Wx), np.zeros_like(Wh), np.zeros_like(b)]
+        self.layers = None
+
+        self.h, self.c = None, None
+        self.dh = None
+        self.stateful = stateful
+
+    def forward(self, xs):
+        Wx, Wh, b = self.params
+        N, T, D = xs.shape
+        H = Wh.shape[0]
+
+        self.layers = []
+        hs = np.empty((N, T, H), dtype='f')
+
+        if not self.stateful or self.h is None:
+            self.h = np.zeros((N, H), dtype='f')
+        if not self.stateful or self.c is None:
+            self.c = np.zeros((N, H), dtype='f')
+
+        for t in range(T):
+            layer = LSTM(*self.params)
+            self.h, self.c = layer.forward(xs[:, t, :], self.h, self.c)
+            hs[:, t, :] = self.h
+
+            self.layers.append(layer)
+
+        return hs
+
+    def backward(self, dhs):
+        Wx, Wh, b = self.params
+        N, T, H = dhs.shape
+        D = Wx.shape[0]
+
+        dxs = np.empty((N, T, D), dtype='f')
+        dh, dc = 0, 0
+
+        grads = [0, 0, 0]
+        for t in reversed(range(T)):
+            layer = self.layers[t]
+            dx, dh, dc = layer.backward(dhs[:, t, :] + dh, dc)
+            dxs[:, t, :] = dx
+            for i, grad in enumerate(layer.grads):
+                grads[i] += grad
+
+        for i, grad in enumerate(grads):
+            self.grads[i][...] = grad
+        self.dh = dh
+        return dxs
+
+    def set_state(self, h, c=None):
+        self.h, self.c = h, c
+
+    def reset_state(self):
+        self.h, self.c = None, None
+
+import pickle
+
+class Rnnlm():
+    def __init__(self, vocab_size=10000, wordvec_size=100, hidden_size=100):
+        V, D, H = vocab_size, wordvec_size, hidden_size
+        rn = np.random.randn
+
+        # 가중치 초기화
+        embed_W = (rn(V, D) / 100).astype('f')
+        lstm_Wx = (rn(D, 4 * H) / np.sqrt(D)).astype('f')
+        lstm_Wh = (rn(H, 4 * H) / np.sqrt(H)).astype('f')
+        lstm_b = np.zeros(4 * H).astype('f')
+        affine_W = (rn(H, V) / np.sqrt(H)).astype('f')
+        affine_b = np.zeros(V).astype('f')
+
+        # 계층 생성
+        self.layers = [
+            TimeEmbedding(embed_W),
+            TimeLSTM(lstm_Wx, lstm_Wh, lstm_b, stateful=True),
+            TimeAffine(affine_W, affine_b)
+        ]
+        self.loss_layer = TimeSoftmaxWithLoss()
+        self.lstm_layer = self.layers[1]
+
+        # 모든 가중치와 기울기를 리스트에 모은다.
+        self.params, self.grads = [], []
+        for layer in self.layers:
+            self.params += layer.params
+            self.grads += layer.grads
+
+    def predict(self, xs):
+        for layer in self.layers:
+            xs = layer.forward(xs)
+        return xs
+
+    def forward(self, xs, ts):
+        score = self.predict(xs)
+        loss = self.loss_layer.forward(score, ts)
+        return loss
+
+    def backward(self, dout=1):
+        dout = self.loss_layer.backward(dout)
+        for layer in reversed(self.layers):
+            dout = layer.backward(dout)
+        return dout
+
+    def reset_state(self):
+        self.lstm_layer.reset_state()
+    
+    def save_params(self, file_name='Rnnlm.pkl'):
+        with open(file_name,'wb') as f:
+            pickle.dump(self.params,f)
+            
+    def load_params(self, file_name='Rnnlm.pkl'):
+        with open(file_name,'rb') as f:
+            self.params = pickle.load(f)       
+                 
+class BetterRnnlm():
+    '''
+     LSTM 계층을 2개 사용하고 각 층에 드롭아웃을 적용한 모델이다.
+     아래 [1]에서 제안한 모델을 기초로 하였고, [2]와 [3]의 가중치 공유(weight tying)를 적용했다.
+
+     [1] Recurrent Neural Network Regularization (https://arxiv.org/abs/1409.2329)
+     [2] Using the Output Embedding to Improve Language Models (https://arxiv.org/abs/1608.05859)
+     [3] Tying Word Vectors and Word Classifiers (https://arxiv.org/pdf/1611.01462.pdf)
+    '''
+    def __init__(self, vocab_size=10000, wordvec_size=650,
+                 hidden_size=650, dropout_ratio=0.5):
+        V, D, H = vocab_size, wordvec_size, hidden_size
+        rn = np.random.randn
+
+        embed_W = (rn(V, D) / 100).astype('f')
+        lstm_Wx1 = (rn(D, 4 * H) / np.sqrt(D)).astype('f')
+        lstm_Wh1 = (rn(H, 4 * H) / np.sqrt(H)).astype('f')
+        lstm_b1 = np.zeros(4 * H).astype('f')
+        lstm_Wx2 = (rn(H, 4 * H) / np.sqrt(H)).astype('f')
+        lstm_Wh2 = (rn(H, 4 * H) / np.sqrt(H)).astype('f')
+        lstm_b2 = np.zeros(4 * H).astype('f')
+        affine_b = np.zeros(V).astype('f')
+
+        self.layers = [
+            TimeEmbedding(embed_W),
+            TimeDropout(dropout_ratio),
+            TimeLSTM(lstm_Wx1, lstm_Wh1, lstm_b1, stateful=True),
+            TimeDropout(dropout_ratio),
+            TimeLSTM(lstm_Wx2, lstm_Wh2, lstm_b2, stateful=True),
+            TimeDropout(dropout_ratio),
+            TimeAffine(embed_W.T, affine_b)  # weight tying!!
+        ]
+        self.loss_layer = TimeSoftmaxWithLoss()
+        self.lstm_layers = [self.layers[2], self.layers[4]]
+        self.drop_layers = [self.layers[1], self.layers[3], self.layers[5]]
+
+        self.params, self.grads = [], []
+        for layer in self.layers:
+            self.params += layer.params
+            self.grads += layer.grads
+
+    def predict(self, xs, train_flg=False):
+        for layer in self.drop_layers:
+            layer.train_flg = train_flg
+
+        for layer in self.layers:
+            xs = layer.forward(xs)
+        return xs
+
+    def forward(self, xs, ts, train_flg=True):
+        score = self.predict(xs, train_flg)
+        loss = self.loss_layer.forward(score, ts)
+        return loss
+
+    def backward(self, dout=1):
+        dout = self.loss_layer.backward(dout)
+        for layer in reversed(self.layers):
+            dout = layer.backward(dout)
+        return dout
+
+    def reset_state(self):
+        for layer in self.lstm_layers:
+            layer.reset_state()
+            
+    def save_params(self, file_name='Rnnlm.pkl'):
+        with open(file_name,'wb') as f:
+            pickle.dump(self.params,f)
+            
+    def load_params(self, file_name='Rnnlm.pkl'):
+        with open(file_name,'rb') as f:
+            self.params = pickle.load(f)       
+            
+            
+class TimeDropout:
+    def __init__(self, dropout_ratio=0.5):
+        self.params, self.grads = [], []
+        self.dropout_ratio = dropout_ratio
+        self.mask = None
+        self.train_flg = True
+
+    def forward(self, xs):
+        if self.train_flg:
+            flg = np.random.rand(*xs.shape) > self.dropout_ratio
+            scale = 1 / (1.0 - self.dropout_ratio)
+            self.mask = flg.astype(np.float32) * scale
+
+            return xs * self.mask
+        else:
+            return xs
+
+    def backward(self, dout):
+        return dout * self.mask
+    
+    
