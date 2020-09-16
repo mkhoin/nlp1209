@@ -38,7 +38,7 @@ import numpy as np
 # print('\n')
 # y = np.sum(x, axis=0, keepdims=True)
 # print(y)
-# # dy = np.random.rand(1, D)
+# dy = np.random.rand(1, D)
 
 
 # In[4]:
@@ -76,29 +76,27 @@ class MatMul:
 # In[6]:
 
 
-a = np.array([1, 2, 3])
-b = np.array([4, 5, 6])
-a = b
+# a = np.array([1, 2, 3])
+# b = np.array([4, 5, 6])
+# a = b
 # print(a)
-id(a) == id(b)
+# id(a) == id(b)
 
 
 # In[7]:
 
 
-a = np.array([1, 2, 3])
-b = np.array([4, 5, 6])
-a[...] = b
+# a = np.array([1, 2, 3])
+# b = np.array([4, 5, 6])
+# a[...] = b
 # print(a)
-id(a) == id(b)
+# id(a) == id(b)
 
 
 # ## 시그모이드 계층
 
 # In[8]:
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
 
 class Sigmoid:
     def __init__(self):
@@ -113,8 +111,47 @@ class Sigmoid:
     def backward(self, dout):
         dx = dout * (1.0 - self.out) * self.out
         return dx
+    
+#  Sigmoidm with Loss 계층    
 
+# SigmoidWithLoss 클래스 사용 
+# nn_layers.py 에 추가한다
 
+class SigmoidWithLoss:
+    def __init__(self):
+        self.params, self.grads = [], []
+        self.loss = None
+        self.y = None  # sigmoid의 출력
+        self.t = None  # 정답 데이터
+
+    def cross_entropy_error(self,y, t):
+        if y.ndim == 1:
+            t = t.reshape(1, t.size)
+            y = y.reshape(1, y.size)
+
+        # 정답 데이터가 원핫 벡터일 경우 정답 레이블 인덱스로 변환
+        if t.size == y.size:
+            t = t.argmax(axis=1)
+
+        batch_size = y.shape[0]
+
+        return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
+        
+    def forward(self, x, t):
+        self.t = t
+        self.y = 1 / (1 + np.exp(-x))   # sigmoid()
+
+        self.loss = self.cross_entropy_error(np.c_[1 - self.y, self.y], self.t)
+
+        return self.loss
+
+    def backward(self, dout=1):
+        batch_size = self.t.shape[0]
+
+        dx = (self.y - self.t) * dout / batch_size
+        return dx
+    
+    
 # ### ReLU 계층
 
 # In[9]:
@@ -169,7 +206,7 @@ class Affine:
 # In[11]:
 
 
-a = np.zeros_like([[1,2,3]]) # 인자와 shape이 같은 배열을 모든 요소를 0으로 생성
+# a = np.zeros_like([[1,2,3]]) # 인자와 shape이 같은 배열을 모든 요소를 0으로 생성
 # print(a,type(a))
 
 
@@ -178,12 +215,24 @@ a = np.zeros_like([[1,2,3]]) # 인자와 shape이 같은 배열을 모든 요소
 # In[12]:
 
 
-# def sigmoid(x):
-#     return 1 / (1 + np.exp(-x))
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
 
 
-# def relu(x):
-#     return np.maximum(0, x)
+def clip_grads(grads, max_norm):
+    total_norm = 0
+    for grad in grads:  # L2 norm 구하기 , 제곱의 합의 제곱근
+        total_norm += np.sum(grad ** 2)
+    total_norm = np.sqrt(total_norm)
+
+    rate = max_norm / (total_norm + 1e-6)
+    if rate < 1: # total_norm 이 한계값(max_norm) 보다 클경우
+        for grad in grads:
+            grad *= rate
+
+            
+def relu(x):
+    return np.maximum(0, x)
 
 
 def softmax(x):
@@ -196,6 +245,20 @@ def softmax(x):
         x = np.exp(x) / np.sum(np.exp(x))
 
     return x
+
+
+def cross_entropy_error(y, t):
+    if y.ndim == 1:
+        t = t.reshape(1, t.size)
+        y = y.reshape(1, y.size)
+        
+    # 정답 데이터가 원핫 벡터일 경우 정답 레이블 인덱스로 변환
+    if t.size == y.size:
+        t = t.argmax(axis=1)
+             
+    batch_size = y.shape[0]
+
+    return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
 
 class Softmax:
     def __init__(self):
@@ -211,21 +274,7 @@ class Softmax:
         sumdx = np.sum(dx, axis=1, keepdims=True)
         dx -= self.out * sumdx
         return dx
-
-# def cross_entropy_error(y, t):
-#     if y.ndim == 1:
-#         t = t.reshape(1, t.size)
-#         y = y.reshape(1, y.size)
-        
-#     # 정답 데이터가 원핫 벡터일 경우 정답 레이블 인덱스로 변환
-#     if t.size == y.size:
-#         t = t.argmax(axis=1)
-             
-#     batch_size = y.shape[0]
-
-#     return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
-
-
+    
 class SoftmaxWithLoss:
     def __init__(self):
         self.params, self.grads = [], []
@@ -335,9 +384,13 @@ class Adam:
             
             params[i] -= lr_t * self.m[i] / (np.sqrt(self.v[i]) + 1e-7)
             
-# https://dalpo0814.tistory.com/29
+
+# word2vec_skipgram 을 위해 추가한 부분
 
 import time
+import matplotlib.pyplot as plt
+plt.rc('font', family='Malgun Gothic')
+
 
 def remove_duplicate(params, grads):
     '''
@@ -374,8 +427,6 @@ def remove_duplicate(params, grads):
 
     return params, grads
 
-import matplotlib.pyplot as plt
-plt.rc('font', family='Malgun Gothic')
 
 class Trainer:
     def __init__(self, model, optimizer):
@@ -434,34 +485,30 @@ class Trainer:
         plt.xlabel('반복 (x' + str(self.eval_interval) + ')')
         plt.ylabel('손실')
         plt.show()
-       
-
-
-
-    
-# Embedding 계층
-class Embedding :
-    def __init__(self,W):
-        self.params =[W]
+        
+# Embedding
+# nn_layers.py에 추가하여 놓는다
+class Embedding:
+    def __init__(self, W):
+        self.params = [W]
         self.grads = [np.zeros_like(W)]
         self.idx = None
-    
-    # 순전파
-    def forward(self,idx):
+        
+    # 순전파    
+    def forward(self, idx):
         W, = self.params
         self.idx = idx
         out = W[idx]
         return out
     
-    # 역전파 
-    def backward(self,dout):   
+    # 속도가 향상됨
+    def backward(self, dout):
         dW, = self.grads
         dW[...] = 0
-        np.add.at(dW, self.idx, dout)
-        return None
+        np.add.at(dW, self.idx, dout)  
+        return None   
     
-
- # EembeddingDot 계층
+# nn_layers.py에 추가하여 놓는다
 class EmbeddingDot:
     def __init__(self, W):
         self.embed = Embedding(W)
@@ -484,11 +531,11 @@ class EmbeddingDot:
         self.embed.backward(dtarget_W)
         dh = dout * target_W
         return dh    
+         
+# UnigramSampler
 
 import collections
 class UnigramSampler:
-    
-    # 생성자 : corpus를 사용하여 단어의 0.75제곱 처리한 확률 분포를 구함
     def __init__(self, corpus, power, sample_size): # power= 0.75, sample_size = 2
         self.sample_size = sample_size
         self.vocab_size = None
@@ -524,42 +571,6 @@ class UnigramSampler:
         return negative_sample
     
 
-# SigmoidWithLoss 클래스 사용 
-class SigmoidWithLoss:
-    def __init__(self):
-        self.params, self.grads = [], []
-        self.loss = None
-        self.y = None  # sigmoid의 출력
-        self.t = None  # 정답 데이터
-
-    def cross_entropy_error(self,y, t):
-        if y.ndim == 1:
-            t = t.reshape(1, t.size)
-            y = y.reshape(1, y.size)
-
-        # 정답 데이터가 원핫 벡터일 경우 정답 레이블 인덱스로 변환
-        if t.size == y.size:
-            t = t.argmax(axis=1)
-
-        batch_size = y.shape[0]
-
-        return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
-        
-    def forward(self, x, t):
-        self.t = t
-        self.y = 1 / (1 + np.exp(-x))   # sigmoid , 예측값
-
-        self.loss = self.cross_entropy_error(np.c_[1 - self.y, self.y], self.t)
-
-        return self.loss
-
-    def backward(self, dout=1):
-        batch_size = self.t.shape[0]
-
-        dx = (self.y - self.t) * dout / batch_size
-        return dx
-
-    
 # NegativeSamplingLoss 클래스
 
 class NegativeSamplingLoss:
@@ -599,7 +610,7 @@ class NegativeSamplingLoss:
             dh += l1.backward(dscore)  # EmbeddingDot 계층
 
         return dh
-    
+
 class TimeEmbedding:
     def __init__(self, W):
         self.params = [W]
@@ -609,14 +620,14 @@ class TimeEmbedding:
 
     def forward(self, xs):  # N : batch size, T : sequence length , D : input size 
         N, T = xs.shape
-        V, D = self.W.shape  # V : Hidden size
+        V, D = self.W.shape  # V : Hidden size, 사용되지 않음
 
         out = np.empty((N, T, D), dtype='f')
         self.layers = []
 
         for t in range(T):
             layer = Embedding(self.W)
-            out[:, t, :] = layer.forward(xs[:, t]) # Embedding  계층을 사용하여 t번째 데이터를 사용하여 forward()호출,3차원으로변환
+            out[:, t, :] = layer.forward(xs[:, t]) # Embedding  계층을 사용하여 t번째 데이터를 사용하여 forward()호출
             self.layers.append(layer)
 
         return out
@@ -665,6 +676,7 @@ class TimeAffine:
         self.grads[1][...] = db
 
         return dx
+    
     
 class TimeSoftmaxWithLoss:
     def __init__(self):
@@ -718,8 +730,11 @@ class TimeSoftmaxWithLoss:
 
         return dx
     
-import time
-
+    
+    
+    
+# RNNLM  Trainer
+    
 class RnnlmTrainer:
     def __init__(self, model, optimizer):
         self.model = model
@@ -824,19 +839,7 @@ def remove_duplicate(params, grads):
         if not find_flg: break
 
     return params, grads
-
-def clip_grads(grads, max_norm):
-    total_norm = 0
-    for grad in grads:  # L2 norm 구하기 , 제곱의 합의 제곱근
-        total_norm += np.sum(grad ** 2)
-    total_norm = np.sqrt(total_norm)
-
-    rate = max_norm / (total_norm + 1e-6)
-    if rate < 1: # total_norm 이 한계값(max_norm) 보다 클경우
-        for grad in grads:
-            grad *= rate
-
-
+   
 class LSTM:
     def __init__(self, Wx, Wh, b):
         '''
@@ -844,7 +847,7 @@ class LSTM:
         Parameters
         ----------
         Wx: 입력 x에 대한 가중치 매개변수(4개분의 가중치가 담겨 있음)
-        Wh: 은닉 상태 h에 대한 가중치 매개변수(4개분의 가중치가 담겨 있음)
+        Wh: 은닉 상태 h에 대한 가장추 매개변수(4개분의 가중치가 담겨 있음)
         b: 편향（4개분의 편향이 담겨 있음）
         '''
         self.params = [Wx, Wh, b]
@@ -895,9 +898,9 @@ class LSTM:
         do *= o * (1 - o)
         dg *= (1 - g ** 2)   # tanh 미분 : (1-y**2)
 
-        dA = np.hstack((df, dg, di, do)) # 수평으로 합치기 (slice의 역전파)
+        dA = np.hstack((df, dg, di, do)) # 수평으로 합치기
 
-        dWh = np.dot(h_prev.T, dA)  # Matmul 역전파
+        dWh = np.dot(h_prev.T, dA)
         dWx = np.dot(x.T, dA)
         db = dA.sum(axis=0)
 
@@ -905,11 +908,12 @@ class LSTM:
         self.grads[1][...] = dWh
         self.grads[2][...] = db
 
-        dx = np.dot(dA, Wx.T)       # Matmul 역전파
+        dx = np.dot(dA, Wx.T)
         dh_prev = np.dot(dA, Wh.T)
 
         return dx, dh_prev, dc_prev
-
+    
+    
 class TimeLSTM:
     def __init__(self, Wx, Wh, b, stateful=False):
         self.params = [Wx, Wh, b]
@@ -969,6 +973,26 @@ class TimeLSTM:
     def reset_state(self):
         self.h, self.c = None, None
 
+class TimeDropout:
+    def __init__(self, dropout_ratio=0.5):
+        self.params, self.grads = [], []
+        self.dropout_ratio = dropout_ratio
+        self.mask = None
+        self.train_flg = True
+
+    def forward(self, xs):
+        if self.train_flg:
+            flg = np.random.rand(*xs.shape) > self.dropout_ratio
+            scale = 1 / (1.0 - self.dropout_ratio)
+            self.mask = flg.astype(np.float32) * scale
+
+            return xs * self.mask
+        else:
+            return xs
+
+    def backward(self, dout):
+        return dout * self.mask        
+        
 import pickle
 
 class Rnnlm():
@@ -1097,62 +1121,132 @@ class BetterRnnlm():
     def load_params(self, file_name='Rnnlm.pkl'):
         with open(file_name,'rb') as f:
             self.params = pickle.load(f)       
-            
-            
-class TimeDropout:
-    def __init__(self, dropout_ratio=0.5):
-        self.params, self.grads = [], []
-        self.dropout_ratio = dropout_ratio
-        self.mask = None
-        self.train_flg = True
 
-    def forward(self, xs):
-        if self.train_flg:
-            flg = np.random.rand(*xs.shape) > self.dropout_ratio
-            scale = 1 / (1.0 - self.dropout_ratio)
-            self.mask = flg.astype(np.float32) * scale
-
-            return xs * self.mask
-        else:
-            return xs
-
-    def backward(self, dout):
-        return dout * self.mask
-    
-# Encoder class
 class Encoder:
-    def __init__(self,vocab_size,wordvec_size,hidden_size):
-        V,D,H = vocab_size, wordvec_size, hidden_size
+    def __init__(self, vocab_size, wordvec_size, hidden_size):
+        V, D, H = vocab_size, wordvec_size, hidden_size
         rn = np.random.randn
-        
-        embed_W = (rn(V,D)/100).astype('f')
-        lstm_Wx = (rn(D, 4*H) / np.sqrt(D)).astype('f')
-        lstm_Wh = (rn(H, 4*H) / np.sqrt(H)).astype('f')
-        lstm_b  = np.zeros(4*H).astype('f')
-        
+
+        embed_W = (rn(V, D) / 100).astype('f')
+        lstm_Wx = (rn(D, 4 * H) / np.sqrt(D)).astype('f')
+        lstm_Wh = (rn(H, 4 * H) / np.sqrt(H)).astype('f')
+        lstm_b = np.zeros(4 * H).astype('f')
+
         self.embed = TimeEmbedding(embed_W)
         self.lstm = TimeLSTM(lstm_Wx, lstm_Wh, lstm_b, stateful=False)
-        
+
         self.params = self.embed.params + self.lstm.params
         self.grads = self.embed.grads + self.lstm.grads
         self.hs = None
-        
-    def forward(self,xs):
+
+    def forward(self, xs):
         xs = self.embed.forward(xs)
         hs = self.lstm.forward(xs)
         self.hs = hs
-        return hs[:,-1,:] #  마지막 TimeLSTM 계층의 은닉 상태를 반환
-    
-    def backward(self,dh):
+        return hs[:, -1, :]  # 마지막 TimeLSTM 계층의 은닉 상태를 반환
+
+    def backward(self, dh):
         dhs = np.zeros_like(self.hs)
-        dhs[:,-1,:] = dh
-        
-        dout = self.lstm.backward(dhs)
+        dhs[:, -1, :] = dh
+
+        dout = self.lstm.backward(dhs)  # 순전파의 반대 순서로 기울기 전달
         dout = self.embed.backward(dout)
         return dout
 
 
-class Seq2seq():
+class Decoder:
+    def __init__(self, vocab_size, wordvec_size, hidden_size):
+        V, D, H = vocab_size, wordvec_size, hidden_size
+        rn = np.random.randn
+
+        embed_W = (rn(V, D) / 100).astype('f')
+        lstm_Wx = (rn(D, 4 * H) / np.sqrt(D)).astype('f')
+        lstm_Wh = (rn(H, 4 * H) / np.sqrt(H)).astype('f')
+        lstm_b = np.zeros(4 * H).astype('f')
+        affine_W = (rn(H, V) / np.sqrt(H)).astype('f')
+        affine_b = np.zeros(V).astype('f')
+
+        self.embed = TimeEmbedding(embed_W)
+        self.lstm = TimeLSTM(lstm_Wx, lstm_Wh, lstm_b, stateful=True)
+        self.affine = TimeAffine(affine_W, affine_b)
+
+        self.params, self.grads = [], []
+        for layer in (self.embed, self.lstm, self.affine):
+            self.params += layer.params
+            self.grads += layer.grads
+
+    # 학습시 호출        
+    def forward(self, xs, h):
+        self.lstm.set_state(h)
+
+        out = self.embed.forward(xs)
+        out = self.lstm.forward(out)
+        score = self.affine.forward(out)  # softmax를 통과시키지 않고 그냥 출력
+        return score
+
+    def backward(self, dscore):
+        dout = self.affine.backward(dscore)
+        dout = self.lstm.backward(dout)
+        dout = self.embed.backward(dout)
+        dh = self.lstm.dh   # TimeLSTM의 backward()에서 dh가 얻어져 저장 되어 있으므로
+        return dh
+
+    # 문장 생성시 호출
+    def generate(self, h, start_id, sample_size): # h는 은닉상태
+        sampled = []
+        sample_id = start_id
+        self.lstm.set_state(h)
+
+        for _ in range(sample_size):
+            x = np.array(sample_id).reshape((1, 1))
+            out = self.embed.forward(x)
+            out = self.lstm.forward(out)
+            score = self.affine.forward(out)
+
+            sample_id = np.argmax(score.flatten()) # 점수가 가장 큰 문자의 ID를 선택
+            sampled.append(int(sample_id))
+
+        return sampled
+    
+class BaseModel:
+    def __init__(self):
+        self.params, self.grads = None, None
+
+    def forward(self, *args):
+        raise NotImplementedError
+
+    def backward(self, *args):
+        raise NotImplementedError
+
+    def save_params(self, file_name=None):
+        if file_name is None:
+            file_name = self.__class__.__name__ + '.pkl'
+
+        params = [p.astype(np.float16) for p in self.params]
+
+        with open(file_name, 'wb') as f:
+            pickle.dump(params, f)
+
+    def load_params(self, file_name=None):
+        if file_name is None:
+            file_name = self.__class__.__name__ + '.pkl'
+
+        if '/' in file_name:
+            file_name = file_name.replace('/', os.sep)
+
+        if not os.path.exists(file_name):
+            raise IOError('No file: ' + file_name)
+
+        with open(file_name, 'rb') as f:
+            params = pickle.load(f)
+
+        params = [p.astype('f') for p in params]
+
+        for i, param in enumerate(self.params):
+            param[...] = params[i]
+
+            
+class Seq2seq(BaseModel):
     def __init__(self, vocab_size, wordvec_size, hidden_size):
         V, D, H = vocab_size, wordvec_size, hidden_size
         self.encoder = Encoder(V, D, H)
@@ -1179,5 +1273,163 @@ class Seq2seq():
     def generate(self, xs, start_id, sample_size):
         h = self.encoder.forward(xs)
         sampled = self.decoder.generate(h, start_id, sample_size)
-        return sampled    
-             
+        return sampled 
+
+class PeekyDecoder:
+    def __init__(self, vocab_size, wordvec_size, hidden_size):
+        V, D, H = vocab_size, wordvec_size, hidden_size
+        rn = np.random.randn
+
+        embed_W = (rn(V, D) / 100).astype('f')
+        lstm_Wx = (rn(H + D, 4 * H) / np.sqrt(H + D)).astype('f') # D --> H + D , concat으로 인하여 H만큼 추가됨
+        lstm_Wh = (rn(H, 4 * H) / np.sqrt(H)).astype('f')
+        lstm_b = np.zeros(4 * H).astype('f')
+        affine_W = (rn(H + H, V) / np.sqrt(H + H)).astype('f')    # H --> H + H , concat으로 인하여 H만큼 추가됨
+        affine_b = np.zeros(V).astype('f')
+
+        self.embed = TimeEmbedding(embed_W)
+        self.lstm = TimeLSTM(lstm_Wx, lstm_Wh, lstm_b, stateful=True)
+        self.affine = TimeAffine(affine_W, affine_b)
+
+        self.params, self.grads = [], []
+        for layer in (self.embed, self.lstm, self.affine):
+            self.params += layer.params
+            self.grads += layer.grads
+        self.cache = None
+
+    def forward(self, xs, h):
+        N, T = xs.shape
+        N, H = h.shape
+
+        self.lstm.set_state(h)
+
+        out = self.embed.forward(xs)
+        hs = np.repeat(h, T, axis=0).reshape(N, T, H) # 입력된 h를 시계열 갯수 만큼 복제한다
+        out = np.concatenate((hs, out), axis=2)       # Embedding 계층 출력과 hs를 concatenate한다
+
+        out = self.lstm.forward(out)                  # LSTM 계층의 forward에 합쳐진 out을 전달
+        out = np.concatenate((hs, out), axis=2)       # LSTM 계층 출력과 hs를 concatenate한다
+
+        score = self.affine.forward(out)              # Affine계층의 forward에 합쳐진 out을 전달
+        self.cache = H
+        return score
+
+    def backward(self, dscore):
+        H = self.cache
+
+        dout = self.affine.backward(dscore)
+        dout, dhs0 = dout[:, :, H:], dout[:, :, :H]
+        dout = self.lstm.backward(dout)
+        dembed, dhs1 = dout[:, :, H:], dout[:, :, :H]
+        self.embed.backward(dembed)
+
+        dhs = dhs0 + dhs1        # Affine의 backward 출력 dhs0과 LSTM의 backward 출력 dhs1을 더한다
+        dh = self.lstm.dh + np.sum(dhs, axis=1) # LSTM의 backward출력 dh와 dhs의 수평합과 더한다, 최종 출력값
+        return dh
+
+    def generate(self, h, start_id, sample_size):
+        sampled = []
+        char_id = start_id
+        self.lstm.set_state(h)
+
+        H = h.shape[1]
+        peeky_h = h.reshape(1, 1, H)
+        for _ in range(sample_size):
+            x = np.array([char_id]).reshape((1, 1))
+            out = self.embed.forward(x)
+
+            out = np.concatenate((peeky_h, out), axis=2)  # 입력된 peeky_h를 Embedding 계층 출력과 concatenate한다
+            out = self.lstm.forward(out)
+            out = np.concatenate((peeky_h, out), axis=2)  # 입력된 peeky_h를 LSTM 계층 출력과 concatenate한다
+            score = self.affine.forward(out)
+
+            char_id = np.argmax(score.flatten())          # 점수가 가장 큰 문자의 ID를 선택
+            sampled.append(char_id)
+
+        return sampled
+
+
+class PeekySeq2seq(Seq2seq): # Seq2seq클래스를 상속하여 구현, forward(),backward(),generate() 메서드는 모두 동일
+    def __init__(self, vocab_size, wordvec_size, hidden_size):
+        V, D, H = vocab_size, wordvec_size, hidden_size
+        self.encoder = Encoder(V, D, H)
+        self.decoder = PeekyDecoder(V, D, H)  # PeekyDecoder사용, 이 부분만 Seq2seq클래스와 다르다
+        self.softmax = TimeSoftmaxWithLoss()
+
+        self.params = self.encoder.params + self.decoder.params
+        self.grads = self.encoder.grads + self.decoder.grads
+
+import os
+
+# PPL 계산 함수
+def eval_perplexity(model, corpus, batch_size=10, time_size=35):
+    print('퍼플렉서티 평가 중 ...')
+    corpus_size = len(corpus)
+    total_loss, loss_cnt = 0, 0
+    max_iters = (corpus_size - 1) // (batch_size * time_size)
+    jump = (corpus_size - 1) // batch_size
+
+    for iters in range(max_iters):
+        xs = np.zeros((batch_size, time_size), dtype=np.int32)
+        ts = np.zeros((batch_size, time_size), dtype=np.int32)
+        time_offset = iters * time_size
+        offsets = [time_offset + (i * jump) for i in range(batch_size)]
+        for t in range(time_size):
+            for i, offset in enumerate(offsets):
+                xs[i, t] = corpus[(offset + t) % corpus_size]
+                ts[i, t] = corpus[(offset + t + 1) % corpus_size]
+
+        try:
+            loss = model.forward(xs, ts, train_flg=False)
+        except TypeError:
+            loss = model.forward(xs, ts)
+        total_loss += loss
+
+        sys.stdout.write('\r%d / %d' % (iters, max_iters))
+        sys.stdout.flush()
+
+    print('')
+    ppl = np.exp(total_loss / max_iters) 
+    return ppl
+
+# generate()을 호출하여 예측한 답이 맞는지 여부를 출력하고 맞으면 1을 틀리면 0을 반환해주는  함수
+# Q 77+85  
+# T 162 
+# O 162 
+def eval_seq2seq(model, question, correct, id_to_char,
+                 verbos=False, is_reverse=False):
+    correct = correct.flatten()
+    # 머릿글자
+    start_id = correct[0]
+    correct = correct[1:]
+    guess = model.generate(question, start_id, len(correct))
+
+    # 문자열로 변환
+    question = ''.join([id_to_char[int(c)] for c in question.flatten()])
+    correct = ''.join([id_to_char[int(c)] for c in correct])
+    guess = ''.join([id_to_char[int(c)] for c in guess])
+
+    if verbos:
+        if is_reverse:
+            question = question[::-1]
+
+        colors = {'ok': '\033[92m', 'fail': '\033[91m', 'close': '\033[0m'}
+        print('Q', question)
+        print('T', correct)
+
+        is_windows = os.name == 'nt'
+
+        if correct == guess:
+            mark = colors['ok'] + '☑' + colors['close']
+            if is_windows:
+                mark = 'O'
+            print(mark + ' ' + guess)
+        else:
+            mark = colors['fail'] + '☒' + colors['close']
+            if is_windows:
+                mark = 'X'
+            print(mark + ' ' + guess)
+        print('---')
+
+    return 1 if guess == correct else 0
+        
