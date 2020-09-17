@@ -53,6 +53,10 @@ https://www.tensorflow.org/guide/migrate?hl=ko
 #### https://theorydb.github.io/dev/2019/08/23/dev-ml-colab/  <br>
 <br>
 
+### KoNLPy 설치 방법
+https://konlpy-ko.readthedocs.io/ko/v0.4.3/install/#id1
+<br>
+
 
 ### 점프투 파이썬 온라인 공개 URL
 https://wikidocs.net/4307
