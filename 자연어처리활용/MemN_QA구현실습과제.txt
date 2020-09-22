@@ -8,8 +8,8 @@ path = get_file('babi-tasks-v1-2.tar.gz', origin='https://s3.amazonaws.com/text-
                 'babi_tasks_1-20_v1-2.tar.gz')
                 
 with tarfile.open(path) as tar:
- tar.extractall()
- tar.close()
+    tar.extractall()
+    tar.close()
 
 DATA_DIR = 'tasks_1-20_v1-2/en-10k'
 TRAIN_FILE = os.path.join(DATA_DIR, "qa1_single-supporting-fact_train.txt")
